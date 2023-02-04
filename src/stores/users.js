@@ -7,6 +7,7 @@ export const useUserStore = defineStore('users', () => {
   const errorMessage = ref("")
   const successMessage = ref("")
   const loading = ref(false)
+  const loadingUser = ref(false)
 
   const validateEmail = (email) => {
     return String(email)
@@ -16,7 +17,44 @@ export const useUserStore = defineStore('users', () => {
       );
   };
 
-  const handleLogin = () => {}
+  const handleLogin = async (credentials) => {
+    const { email, password } = credentials
+
+    if(!validateEmail(email)) {
+      return errorMessage.value = "Email is invalid"
+    }
+
+    if(!password.length) return errorMessage.value = "Password cannot be empty"
+
+    loading.value = true
+    const { error, data } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    })
+
+    if(error) {
+      loading.value = false
+      return errorMessage.value = error.message
+    }
+
+    const { data: existingUser } = await supabase
+    .from("users")
+    .select()
+    .eq('email', email)
+    .single()
+
+    console.log("existingUser", existingUser)
+    user.value = {
+      id: existingUser.id,
+      email: existingUser.email,
+      username: existingUser.username
+    }
+
+    successMessage.value = "Successfully Logged"
+    errorMessage.value = ""
+    loading.value = false
+  } // handleLogin
+
   const handleSignup = async (credential) => {
     const { email, password, username } = credential
     
@@ -80,10 +118,37 @@ export const useUserStore = defineStore('users', () => {
     successMessage.value = "Successfully Saved"
     loading.value = false
   } // handleSignup
-  const handleLogout = () => {}
-  const getUser = () => {}
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    user.value = null
+  }
+  const getUser = async () => {
+    loadingUser.value = true
+    const { data } = await supabase.auth.getUser()
+    console.log("getUser", data)
+
+    if(!data?.user) {
+      loadingUser.value = false
+      return 
+    }
+
+    const { data: userWithEmail } = await supabase
+      .from("users")
+      .select()
+      .eq("email", data.user.email)
+      .single()
+
+    user.value = {
+      username: userWithEmail.username,
+      email: userWithEmail.email,
+      id: userWithEmail.id
+    }
+
+    loadingUser.value = false
+  }
   const clearErrorMessage = () => errorMessage.value = ""
   const clearSuccessMessage = () => successMessage.value = ""
 
-  return { user, loading, errorMessage, successMessage, handleLogin, handleSignup, handleLogout, getUser, clearErrorMessage }
+  return { user, loading, loadingUser, errorMessage, successMessage, handleLogin, handleSignup, handleLogout, getUser, clearErrorMessage, clearSuccessMessage }
 })

@@ -1,18 +1,27 @@
 <script setup>
 import { ref } from "vue";
 import { RouterLink, useRouter } from "vue-router";
+import { storeToRefs } from "pinia";
+import { useUserStore } from "../stores/users";
 import Container from "./Container.vue";
 import AuthModal from "./AuthModal.vue";
 
+const userStore = useUserStore();
+
+const { user, loadingUser } = storeToRefs(userStore);
 const router = useRouter();
 const searchUserName = ref("");
-const isAutenticated = ref(false);
+
 const onSearch = () => {
   if (searchUserName.value) {
     console.log("search", searchUserName);
     router.push(`/profile/${searchUserName.value}`);
     searchUserName.value = "";
   }
+};
+
+const handleLogout = async () => {
+  await userStore.handleLogout();
 };
 </script>
 
@@ -35,14 +44,15 @@ const onSearch = () => {
           <a-menu-item key="3">nav 3</a-menu-item>
         </a-menu>
 
-        <!-- <a-button type="primary">Signup</a-button> -->
-        <div v-if="!isAutenticated" class="auth-wrapper">
-          <AuthModal :isLogin="false" />
-          <AuthModal :isLogin="true" />
-        </div>
-        <div v-else class="auth-wrapper">
-          <a-button class="primary">Profile</a-button>
-          <a-button class="primary">Logout</a-button>
+        <div v-if="!loadingUser">
+          <div v-if="!user" class="auth-wrapper">
+            <AuthModal :isLogin="false" />
+            <AuthModal :isLogin="true" />
+          </div>
+          <div v-else class="auth-wrapper">
+            <a-button>Profile</a-button>
+            <a-button @click="handleLogout">Logout</a-button>
+          </div>
         </div>
       </div>
     </Container>
