@@ -1,40 +1,75 @@
 <script setup>
+import { ref, onMounted } from "vue";
+import { useRoute } from "vue-router";
+import { supabase } from "../supabase";
 import Container from "./Container.vue";
 import ImageGallery from "./ImageGallery.vue";
 import UserBar from "./UserBar.vue";
+
+const route = useRoute();
+const { username } = route.params;
+const user = ref(null);
+const posts = ref([]);
+const loading = ref(false);
+
+const addNewPost = (post) => {
+  posts.value.unshift(post);
+};
+const fetchData = async () => {
+  console.log("fetchData username", username);
+
+  loading.value = true;
+  // get username from supabase
+  const { data: userData } = await supabase
+    .from("users")
+    .select()
+    .eq("username", username)
+    .single();
+
+  if (!userData) {
+    user.value = null;
+    loading.value = false;
+    return;
+  }
+
+  user.value = userData;
+  console.log("userData", userData);
+  console.log("user.value", user.value);
+  console.log("user.value.username", user.value.username);
+
+  // get all posts / images for user
+  const { data: postsData } = await supabase
+    .from("posts")
+    .select()
+    .eq("owner_id", user.value.id);
+
+  console.log("postsData", postsData);
+  posts.value = postsData;
+  loading.value = false;
+};
+
+onMounted(() => fetchData());
 </script>
 
 <template>
   <Container>
-    <div class="profile-container">
+    <div class="profile-container" v-if="!loading">
       <UserBar
-        userName="Gabro"
+        :key="$route.params.username"
+        :username="'gGG'"
+        :user="user"
         :userInfo="{
           posts: 0,
           followers: 200,
           following: 2142,
         }"
+        :addNewPost="addNewPost"
       />
 
-      <ImageGallery
-        :posts="[
-          {
-            id: 1,
-            image:
-              'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cGVyc29ufGVufDB8fDB8fA%3D%3D&w=1000&q=80',
-          },
-          {
-            id: 2,
-            image:
-              'https://www.shutterstock.com/image-photo/young-handsome-man-beard-wearing-260nw-1768126784.jpg',
-          },
-          {
-            id: 3,
-            image:
-              'https://www.dmarge.com/wp-content/uploads/2021/01/dwayne-the-rock-.jpg',
-          },
-        ]"
-      />
+      <ImageGallery :posts="posts" />
+    </div>
+    <div v-else class="spinner">
+      <a-spin />
     </div>
   </Container>
 </template>
@@ -47,5 +82,13 @@ import UserBar from "./UserBar.vue";
   width: inherit;
   margin-top: 1rem;
   gap: 1rem;
+}
+
+.spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 85vh;
+  width: inherit;
 }
 </style>

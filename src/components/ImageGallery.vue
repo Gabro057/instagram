@@ -4,7 +4,12 @@ const props = defineProps(["posts"]);
 
 <template>
   <div class="image-gallery-container">
-    <img :key="post.id" :src="post.image" alt="" v-for="post in props.posts" />
+    <img
+      :key="post.id"
+      :src="`https://dvsztzvmkvqmwfpzqtsf.supabase.co/storage/v1/object/public/images/${post.url}`"
+      alt=""
+      v-for="post in props.posts"
+    />
   </div>
 </template>
 
@@ -13,6 +18,7 @@ const props = defineProps(["posts"]);
   display: flex;
   justify-content: left;
   flex-wrap: wrap;
+  width: inherit;
 }
 
 img {
