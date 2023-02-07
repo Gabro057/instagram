@@ -1,19 +1,33 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, reactive, onMounted, watch } from "vue";
 import { useRoute } from "vue-router";
 import { supabase } from "../supabase";
+import { useUserStore } from "../stores/users";
+import { storeToRefs } from "pinia";
+
 import Container from "./Container.vue";
 import ImageGallery from "./ImageGallery.vue";
 import UserBar from "./UserBar.vue";
 
 const route = useRoute();
+const userStore = useUserStore();
 const { username } = route.params;
+const { user: loggedInUser } = storeToRefs(userStore);
 const user = ref(null);
+const isFollowing = ref(false);
 const posts = ref([]);
 const loading = ref(false);
+const userInfo = reactive({
+  posts: null,
+  followers: null,
+  following: null,
+});
 
 const addNewPost = (post) => {
   posts.value.unshift(post);
+};
+const updateIsFollowing = (follow) => {
+  isFollowing.value = follow;
 };
 const fetchData = async () => {
   console.log("fetchData username", username);
@@ -33,9 +47,6 @@ const fetchData = async () => {
   }
 
   user.value = userData;
-  console.log("userData", userData);
-  console.log("user.value", user.value);
-  console.log("user.value.username", user.value.username);
 
   // get all posts / images for user
   const { data: postsData } = await supabase
@@ -45,9 +56,50 @@ const fetchData = async () => {
 
   console.log("postsData", postsData);
   posts.value = postsData;
+  await fetchIsFollowing();
+  const followerCount = await fetchFollowersCount();
+  const followingCount = await fetchFollowingCount();
+  userInfo.followers = followerCount;
+  userInfo.following = followingCount;
+  userInfo.posts = posts.value.length;
+
   loading.value = false;
 };
 
+const fetchFollowersCount = async () => {
+  const { count } = await supabase
+    .from("followers_following")
+    .select("*", { count: "exact" })
+    .eq("following_id", user.value.id);
+
+  return count;
+};
+
+const fetchFollowingCount = async () => {
+  const { count } = await supabase
+    .from("followers_following")
+    .select("*", { count: "exact" })
+    .eq("follower_id", user.value.id);
+
+  return count;
+};
+
+const fetchIsFollowing = async () => {
+  if (!loggedInUser.value || loggedInUser.value.id === user.value.id) return; // je loggedUser a zalogovany uziv neni stejny jako ten z profilu
+
+  const { data } = await supabase
+    .from("followers_following")
+    .select()
+    .eq("follower_id", loggedInUser.value.id)
+    .eq("following_id", user.value.id)
+    .single();
+
+  if (data) isFollowing.value = true;
+};
+
+watch(loggedInUser, () => {
+  fetchIsFollowing();
+});
 onMounted(() => fetchData());
 </script>
 
@@ -56,14 +108,11 @@ onMounted(() => fetchData());
     <div class="profile-container" v-if="!loading">
       <UserBar
         :key="$route.params.username"
-        :username="'gGG'"
         :user="user"
-        :userInfo="{
-          posts: 0,
-          followers: 200,
-          following: 2142,
-        }"
+        :userInfo="userInfo"
         :addNewPost="addNewPost"
+        :isFollowing="isFollowing"
+        :updateIsFollowing="updateIsFollowing"
       />
 
       <ImageGallery :posts="posts" />
