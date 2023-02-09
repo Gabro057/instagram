@@ -43,11 +43,7 @@ const goToUsersProfile = () => {
         />
       </div>
       <div class="btn-wrapper">
-        <a-menu theme="dark" mode="horizontal" :style="{ lineHeight: '64px' }">
-          <a-menu-item key="1">nav 1</a-menu-item>
-          <a-menu-item key="2">nav 2</a-menu-item>
-          <a-menu-item key="3">nav 3</a-menu-item>
-        </a-menu>
+        <div v-if="user" class="user-name">{{ user.username }}</div>
 
         <div v-if="!loadingUser">
           <div v-if="!user" class="auth-wrapper">
@@ -79,5 +75,10 @@ const goToUsersProfile = () => {
 .auth-wrapper {
   display: flex;
   gap: 0.5rem;
+}
+
+.user-name {
+  color: #f0f0f0;
+  margin-right: 0.5rem;
 }
 </style>
