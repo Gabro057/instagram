@@ -118,7 +118,7 @@ onMounted(() => fetchData());
       <ImageGallery :posts="posts" />
     </div>
     <div v-else class="spinner">
-      <a-spin />
+      <q-spinner />
     </div>
   </Container>
 </template>
